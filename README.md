@@ -738,3 +738,4 @@ The project’s actual script and dependency setup is defined in `package.json` 
 ## AI Usage Disclosure
 
 AI-assisted development tools were used to accelerate scaffolding and implementation. All generated code was reviewed, tested, and refined to ensure requirements were met and the application functioned correctly.
+](http://localhost:8080/)
