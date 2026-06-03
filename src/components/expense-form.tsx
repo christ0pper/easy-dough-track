@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import {
   CATEGORIES,
+  MIN_EXPENSE_DATE,
   normalizeExpenseInput,
   todayISO,
   validateExpenseInput,
@@ -119,11 +120,18 @@ export function ExpenseForm({ initial, onSubmit, onCancel, submitLabel = "Save" 
           <Label htmlFor="date">Date</Label>
           <Input
             id="date"
-            type="date"
+            type="text"
             value={date}
-            max={todayISO()}
+            inputMode="numeric"
+            placeholder="YYYY-MM-DD"
+            pattern="\d{4}-\d{2}-\d{2}"
+            maxLength={10}
+            aria-describedby="date-help"
             onChange={(e) => setDate(e.target.value)}
           />
+          <p id="date-help" className="text-xs text-muted-foreground">
+            {`Use YYYY-MM-DD. Allowed range: ${MIN_EXPENSE_DATE} to ${todayISO()}.`}
+          </p>
           {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
         </div>
       </div>

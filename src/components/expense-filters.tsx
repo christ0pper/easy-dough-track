@@ -11,6 +11,7 @@ import {
 import {
   CATEGORIES,
   DEFAULT_EXPENSE_FILTERS,
+  MIN_EXPENSE_DATE,
   hasInvalidExpenseFilterRange,
   type ExpenseFilters,
 } from "@/lib/expenses";
@@ -61,6 +62,8 @@ export function ExpenseFilters({ value, onChange }: Props) {
         <Input
           id="from"
           type="date"
+          min={MIN_EXPENSE_DATE}
+          max={value.to || undefined}
           value={value.from}
           onChange={(e) => updateFilters({ from: e.target.value })}
         />
@@ -70,6 +73,7 @@ export function ExpenseFilters({ value, onChange }: Props) {
         <Input
           id="to"
           type="date"
+          min={value.from || MIN_EXPENSE_DATE}
           value={value.to}
           onChange={(e) => updateFilters({ to: e.target.value })}
         />

@@ -31,6 +31,7 @@ export interface ExpenseFilters {
 export type ExpenseValidationErrors = Partial<Record<keyof ExpenseInput, string>>;
 
 const STORAGE_KEY = "expenses:v1";
+export const MIN_EXPENSE_DATE = "2000-01-01";
 
 export const DEFAULT_EXPENSE_FILTERS: ExpenseFilters = {
   search: "",
@@ -43,12 +44,34 @@ function isExpenseCategory(value: unknown): value is Category {
   return typeof value === "string" && CATEGORIES.includes(value as Category);
 }
 
-function isValidDateString(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-    !Number.isNaN(new Date(value).getTime())
-  );
+function parseIsoDateString(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+
+  const parsedDate = new Date(Date.UTC(year, month - 1, day));
+  const isExactCalendarDate =
+    parsedDate.getUTCFullYear() === year &&
+    parsedDate.getUTCMonth() === month - 1 &&
+    parsedDate.getUTCDate() === day;
+
+  if (!isExactCalendarDate) {
+    return null;
+  }
+
+  return { year, month, day };
+}
+
+export function isValidDateString(value: unknown): value is string {
+  return typeof value === "string" && parseIsoDateString(value) !== null;
 }
 
 function normalizeExpense(value: unknown): Expense | null {
@@ -130,8 +153,11 @@ export function validateExpenseInput(expense: ExpenseInput): ExpenseValidationEr
   else if (expense.amount > 1_000_000_000) errors.amount = "Too large";
 
   if (!expense.date) errors.date = "Date required";
-  else if (!isValidDateString(expense.date)) errors.date = "Valid date required";
-  else if (expense.date > today) errors.date = "Future dates are not allowed";
+  else if (!isValidDateString(expense.date)) {
+    errors.date = "Enter a valid date in YYYY-MM-DD format";
+  } else if (expense.date < MIN_EXPENSE_DATE) {
+    errors.date = `Date must be on or after ${MIN_EXPENSE_DATE}`;
+  } else if (expense.date > today) errors.date = "Future dates are not allowed";
 
   if (trimmedNote.length > 500) errors.note = "Max 500 chars";
 
