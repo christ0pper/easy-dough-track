@@ -1,0 +1,157 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CATEGORIES, todayISO, type Category, type Expense } from "@/lib/expenses";
+
+export interface ExpenseFormValues {
+  title: string;
+  amount: number;
+  category: Category;
+  date: string;
+  note?: string;
+}
+
+interface Props {
+  initial?: Expense;
+  onSubmit: (values: ExpenseFormValues) => void;
+  onCancel?: () => void;
+  submitLabel?: string;
+}
+
+export function ExpenseForm({ initial, onSubmit, onCancel, submitLabel = "Save" }: Props) {
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState<Category>("Food");
+  const [date, setDate] = useState(todayISO());
+  const [note, setNote] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (initial) {
+      setTitle(initial.title);
+      setAmount(String(initial.amount));
+      setCategory(initial.category);
+      setDate(initial.date);
+      setNote(initial.note ?? "");
+    }
+  }, [initial]);
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const newErrors: Record<string, string> = {};
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) newErrors.title = "Title is required";
+    else if (trimmedTitle.length > 100) newErrors.title = "Max 100 chars";
+    const amt = Number(amount);
+    if (!amount || Number.isNaN(amt)) newErrors.amount = "Valid amount required";
+    else if (amt <= 0) newErrors.amount = "Must be greater than 0";
+    else if (amt > 1_000_000_000) newErrors.amount = "Too large";
+    if (!date) newErrors.date = "Date required";
+    if (note.length > 500) newErrors.note = "Max 500 chars";
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
+    onSubmit({
+      title: trimmedTitle,
+      amount: amt,
+      category,
+      date,
+      note: note.trim() || undefined,
+    });
+
+    if (!initial) {
+      setTitle("");
+      setAmount("");
+      setCategory("Food");
+      setDate(todayISO());
+      setNote("");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="title">Title *</Label>
+          <Input
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Lunch"
+            maxLength={100}
+          />
+          {errors.title && <p className="text-sm text-destructive">{errors.title}</p>}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="amount">Amount *</Label>
+          <Input
+            id="amount"
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+          />
+          {errors.amount && <p className="text-sm text-destructive">{errors.amount}</p>}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="category">Category</Label>
+          <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
+            <SelectTrigger id="category">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="date">Date</Label>
+          <Input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+          {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="note">Note</Label>
+        <Textarea
+          id="note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Optional"
+          maxLength={500}
+          rows={2}
+        />
+        {errors.note && <p className="text-sm text-destructive">{errors.note}</p>}
+      </div>
+      <div className="flex gap-2">
+        <Button type="submit">{submitLabel}</Button>
+        {onCancel && (
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+      </div>
+    </form>
+  );
+}
