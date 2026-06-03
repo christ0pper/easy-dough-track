@@ -8,24 +8,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CATEGORIES } from "@/lib/expenses";
-
-export interface FilterState {
-  search: string;
-  category: string; // "all" or Category
-  from: string;
-  to: string;
-}
+import {
+  CATEGORIES,
+  DEFAULT_EXPENSE_FILTERS,
+  hasInvalidExpenseFilterRange,
+  type ExpenseFilters,
+} from "@/lib/expenses";
 
 interface Props {
-  value: FilterState;
-  onChange: (v: FilterState) => void;
+  value: ExpenseFilters;
+  onChange: (filters: ExpenseFilters) => void;
 }
 
 export function ExpenseFilters({ value, onChange }: Props) {
-  const update = (patch: Partial<FilterState>) => onChange({ ...value, ...patch });
-  const reset = () =>
-    onChange({ search: "", category: "all", from: "", to: "" });
+  const updateFilters = (patch: Partial<ExpenseFilters>) => onChange({ ...value, ...patch });
+  const hasInvalidDateRange = hasInvalidExpenseFilterRange(value);
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -34,7 +31,7 @@ export function ExpenseFilters({ value, onChange }: Props) {
         <Input
           id="search"
           value={value.search}
-          onChange={(e) => update({ search: e.target.value })}
+          onChange={(e) => updateFilters({ search: e.target.value })}
           placeholder="Search..."
         />
       </div>
@@ -42,7 +39,9 @@ export function ExpenseFilters({ value, onChange }: Props) {
         <Label>Category</Label>
         <Select
           value={value.category}
-          onValueChange={(v) => update({ category: v })}
+          onValueChange={(category) =>
+            updateFilters({ category: category as ExpenseFilters["category"] })
+          }
         >
           <SelectTrigger>
             <SelectValue />
@@ -63,7 +62,7 @@ export function ExpenseFilters({ value, onChange }: Props) {
           id="from"
           type="date"
           value={value.from}
-          onChange={(e) => update({ from: e.target.value })}
+          onChange={(e) => updateFilters({ from: e.target.value })}
         />
       </div>
       <div className="space-y-1">
@@ -72,11 +71,21 @@ export function ExpenseFilters({ value, onChange }: Props) {
           id="to"
           type="date"
           value={value.to}
-          onChange={(e) => update({ to: e.target.value })}
+          onChange={(e) => updateFilters({ to: e.target.value })}
         />
       </div>
+      {hasInvalidDateRange && (
+        <p className="sm:col-span-2 lg:col-span-5 text-sm text-destructive">
+          The start date must be earlier than or equal to the end date.
+        </p>
+      )}
       <div className="sm:col-span-2 lg:col-span-5">
-        <Button variant="outline" size="sm" onClick={reset}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onChange(DEFAULT_EXPENSE_FILTERS)}
+        >
           Reset filters
         </Button>
       </div>

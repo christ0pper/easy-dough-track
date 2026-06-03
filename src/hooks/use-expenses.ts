@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  loadExpenses,
-  saveExpenses,
-  type Expense,
-} from "@/lib/expenses";
+import { loadExpenses, saveExpenses, type Expense, type ExpenseInput } from "@/lib/expenses";
 
 export function useExpenses() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -18,26 +14,23 @@ export function useExpenses() {
     if (loaded) saveExpenses(expenses);
   }, [expenses, loaded]);
 
-  const addExpense = useCallback((data: Omit<Expense, "id" | "createdAt">) => {
-    const newExp: Expense = {
+  const addExpense = useCallback((data: ExpenseInput) => {
+    const newExpense: Expense = {
       ...data,
       id: crypto.randomUUID(),
       createdAt: Date.now(),
     };
-    setExpenses((prev) => [newExp, ...prev]);
+    setExpenses((previousExpenses) => [newExpense, ...previousExpenses]);
   }, []);
 
-  const updateExpense = useCallback(
-    (id: string, data: Omit<Expense, "id" | "createdAt">) => {
-      setExpenses((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, ...data } : e)),
-      );
-    },
-    [],
-  );
+  const updateExpense = useCallback((id: string, data: ExpenseInput) => {
+    setExpenses((previousExpenses) =>
+      previousExpenses.map((expense) => (expense.id === id ? { ...expense, ...data } : expense)),
+    );
+  }, []);
 
   const deleteExpense = useCallback((id: string) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+    setExpenses((previousExpenses) => previousExpenses.filter((expense) => expense.id !== id));
   }, []);
 
   return { expenses, addExpense, updateExpense, deleteExpense, loaded };

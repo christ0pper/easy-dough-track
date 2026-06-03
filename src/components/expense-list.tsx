@@ -1,11 +1,5 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Pencil, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,24 +11,31 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ExpenseForm } from "./expense-form";
-import { formatCurrency, type Expense } from "@/lib/expenses";
-import { Pencil, Trash2 } from "lucide-react";
+import { formatCurrency, formatExpenseDate, type Expense, type ExpenseInput } from "@/lib/expenses";
 
 interface Props {
   expenses: Expense[];
-  onUpdate: (id: string, data: Omit<Expense, "id" | "createdAt">) => void;
+  emptyMessage?: string;
+  onUpdate: (id: string, data: ExpenseInput) => void;
   onDelete: (id: string) => void;
 }
 
-export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
-  const [editing, setEditing] = useState<Expense | null>(null);
-  const [deleting, setDeleting] = useState<Expense | null>(null);
+export function ExpenseList({
+  expenses,
+  emptyMessage = "No expenses found.",
+  onUpdate,
+  onDelete,
+}: Props) {
+  const [expenseBeingEdited, setExpenseBeingEdited] = useState<Expense | null>(null);
+  const [expenseBeingDeleted, setExpenseBeingDeleted] = useState<Expense | null>(null);
 
   if (expenses.length === 0) {
     return (
       <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-        No expenses match your filters.
+        {emptyMessage}
       </div>
     );
   }
@@ -42,28 +43,28 @@ export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
   return (
     <>
       <ul className="space-y-2">
-        {expenses.map((e) => (
+        {expenses.map((expense) => (
           <li
-            key={e.id}
+            key={expense.id}
             className="flex flex-col gap-2 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="truncate font-medium">{e.title}</p>
-                <Badge variant="secondary">{e.category}</Badge>
+                <p className="truncate font-medium">{expense.title}</p>
+                <Badge variant="secondary">{expense.category}</Badge>
               </div>
               <p className="text-sm text-muted-foreground">
-                {new Date(e.date).toLocaleDateString()}
-                {e.note ? ` · ${e.note}` : ""}
+                {formatExpenseDate(expense.date)}
+                {expense.note ? ` - ${expense.note}` : ""}
               </p>
             </div>
             <div className="flex items-center justify-between gap-3 sm:justify-end">
-              <span className="font-semibold">{formatCurrency(e.amount)}</span>
+              <span className="font-semibold">{formatCurrency(expense.amount)}</span>
               <div className="flex gap-1">
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => setEditing(e)}
+                  onClick={() => setExpenseBeingEdited(expense)}
                   aria-label="Edit"
                 >
                   <Pencil className="h-4 w-4" />
@@ -71,7 +72,7 @@ export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => setDeleting(e)}
+                  onClick={() => setExpenseBeingDeleted(expense)}
                   aria-label="Delete"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -82,39 +83,46 @@ export function ExpenseList({ expenses, onUpdate, onDelete }: Props) {
         ))}
       </ul>
 
-      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+      <Dialog
+        open={Boolean(expenseBeingEdited)}
+        onOpenChange={(isOpen) => !isOpen && setExpenseBeingEdited(null)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit expense</DialogTitle>
           </DialogHeader>
-          {editing && (
+          {expenseBeingEdited && (
             <ExpenseForm
-              initial={editing}
+              initial={expenseBeingEdited}
               submitLabel="Update"
-              onCancel={() => setEditing(null)}
+              onCancel={() => setExpenseBeingEdited(null)}
               onSubmit={(values) => {
-                onUpdate(editing.id, values);
-                setEditing(null);
+                onUpdate(expenseBeingEdited.id, values);
+                setExpenseBeingEdited(null);
               }}
             />
           )}
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+      <AlertDialog
+        open={Boolean(expenseBeingDeleted)}
+        onOpenChange={(isOpen) => !isOpen && setExpenseBeingDeleted(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this expense?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deleting?.title} — {deleting && formatCurrency(deleting.amount)}
+              {expenseBeingDeleted?.title}
+              {expenseBeingDeleted ? ` - ${formatCurrency(expenseBeingDeleted.amount)}` : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (deleting) onDelete(deleting.id);
-                setDeleting(null);
+                if (expenseBeingDeleted) onDelete(expenseBeingDeleted.id);
+                setExpenseBeingDeleted(null);
               }}
             >
               Delete

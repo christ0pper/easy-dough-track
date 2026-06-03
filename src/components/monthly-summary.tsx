@@ -8,22 +8,23 @@ interface Props {
 
 export function MonthlySummary({ expenses }: Props) {
   const { total, byCategory, monthLabel } = useMemo(() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    const thisMonth = expenses.filter((e) => {
-      const d = new Date(e.date);
-      return d.getFullYear() === y && d.getMonth() === m;
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    const currentMonthExpenses = expenses.filter((expense) => {
+      const expenseDate = new Date(expense.date);
+      return expenseDate.getFullYear() === currentYear && expenseDate.getMonth() === currentMonth;
     });
-    const total = thisMonth.reduce((s, e) => s + e.amount, 0);
-    const byCategory = thisMonth.reduce<Record<string, number>>((acc, e) => {
-      acc[e.category] = (acc[e.category] ?? 0) + e.amount;
-      return acc;
+    const total = currentMonthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const byCategory = currentMonthExpenses.reduce<Record<string, number>>((totals, expense) => {
+      totals[expense.category] = (totals[expense.category] ?? 0) + expense.amount;
+      return totals;
     }, {});
+
     return {
       total,
       byCategory,
-      monthLabel: now.toLocaleString(undefined, { month: "long", year: "numeric" }),
+      monthLabel: currentDate.toLocaleString(undefined, { month: "long", year: "numeric" }),
     };
   }, [expenses]);
 
@@ -53,10 +54,7 @@ export function MonthlySummary({ expenses }: Props) {
                     </span>
                   </div>
                   <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full bg-primary"
-                      style={{ width: `${pct}%` }}
-                    />
+                    <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
                   </div>
                 </li>
               );

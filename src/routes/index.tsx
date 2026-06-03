@@ -3,46 +3,48 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExpenseForm } from "@/components/expense-form";
 import { ExpenseList } from "@/components/expense-list";
-import { ExpenseFilters, type FilterState } from "@/components/expense-filters";
+import { ExpenseFilters } from "@/components/expense-filters";
 import { MonthlySummary } from "@/components/monthly-summary";
 import { useExpenses } from "@/hooks/use-expenses";
+import {
+  DEFAULT_EXPENSE_FILTERS,
+  hasActiveExpenseFilters,
+  hasInvalidExpenseFilterRange,
+  matchesExpenseFilters,
+  sortExpensesByDate,
+} from "@/lib/expenses";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Expense Tracker" },
-      { name: "description", content: "Track your personal expenses, categorize spending, and see monthly summaries." },
+      {
+        name: "description",
+        content: "Track your personal expenses, categorize spending, and see monthly summaries.",
+      },
       { property: "og:title", content: "Expense Tracker" },
-      { property: "og:description", content: "Track your personal expenses, categorize spending, and see monthly summaries." },
+      {
+        property: "og:description",
+        content: "Track your personal expenses, categorize spending, and see monthly summaries.",
+      },
     ],
   }),
-  component: Index,
+  component: ExpenseTrackerPage,
 });
 
-function Index() {
+function ExpenseTrackerPage() {
   const { expenses, addExpense, updateExpense, deleteExpense, loaded } = useExpenses();
-  const [filters, setFilters] = useState<FilterState>({
-    search: "",
-    category: "all",
-    from: "",
-    to: "",
-  });
+  const [filters, setFilters] = useState(DEFAULT_EXPENSE_FILTERS);
+  const hasInvalidFilterRange = hasInvalidExpenseFilterRange(filters);
+  const hasActiveFilters = hasActiveExpenseFilters(filters);
 
-  const filtered = useMemo(() => {
-    const q = filters.search.trim().toLowerCase();
-    return expenses
-      .filter((e) => {
-        if (q && !e.title.toLowerCase().includes(q)) return false;
-        if (filters.category !== "all" && e.category !== filters.category) return false;
-        if (filters.from && e.date < filters.from) return false;
-        if (filters.to && e.date > filters.to) return false;
-        return true;
-      })
-      .sort((a, b) => {
-        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-        return b.createdAt - a.createdAt;
-      });
-  }, [expenses, filters]);
+  const filteredExpenses = useMemo(() => {
+    if (hasInvalidFilterRange) return [];
+
+    return sortExpensesByDate(
+      expenses.filter((expense) => matchesExpenseFilters(expense, filters)),
+    );
+  }, [expenses, filters, hasInvalidFilterRange]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,11 +77,16 @@ function Index() {
             <section>
               <div className="mb-3 flex items-baseline justify-between">
                 <h2 className="text-xl font-semibold">
-                  Expenses {loaded && `(${filtered.length})`}
+                  Expenses {loaded && `(${filteredExpenses.length})`}
                 </h2>
               </div>
               <ExpenseList
-                expenses={filtered}
+                expenses={filteredExpenses}
+                emptyMessage={
+                  hasActiveFilters || hasInvalidFilterRange
+                    ? "No expenses match your filters."
+                    : "No expenses added yet."
+                }
                 onUpdate={updateExpense}
                 onDelete={deleteExpense}
               />

@@ -10,19 +10,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CATEGORIES, todayISO, type Category, type Expense } from "@/lib/expenses";
-
-export interface ExpenseFormValues {
-  title: string;
-  amount: number;
-  category: Category;
-  date: string;
-  note?: string;
-}
+import {
+  CATEGORIES,
+  normalizeExpenseInput,
+  todayISO,
+  validateExpenseInput,
+  type Category,
+  type Expense,
+  type ExpenseInput,
+  type ExpenseValidationErrors,
+} from "@/lib/expenses";
 
 interface Props {
   initial?: Expense;
-  onSubmit: (values: ExpenseFormValues) => void;
+  onSubmit: (values: ExpenseInput) => void;
   onCancel?: () => void;
   submitLabel?: string;
 }
@@ -33,7 +34,7 @@ export function ExpenseForm({ initial, onSubmit, onCancel, submitLabel = "Save" 
   const [category, setCategory] = useState<Category>("Food");
   const [date, setDate] = useState(todayISO());
   const [note, setNote] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<ExpenseValidationErrors>({});
 
   useEffect(() => {
     if (initial) {
@@ -43,31 +44,24 @@ export function ExpenseForm({ initial, onSubmit, onCancel, submitLabel = "Save" 
       setDate(initial.date);
       setNote(initial.note ?? "");
     }
+    setErrors({});
   }, [initial]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const newErrors: Record<string, string> = {};
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) newErrors.title = "Title is required";
-    else if (trimmedTitle.length > 100) newErrors.title = "Max 100 chars";
-    const amt = Number(amount);
-    if (!amount || Number.isNaN(amt)) newErrors.amount = "Valid amount required";
-    else if (amt <= 0) newErrors.amount = "Must be greater than 0";
-    else if (amt > 1_000_000_000) newErrors.amount = "Too large";
-    if (!date) newErrors.date = "Date required";
-    if (note.length > 500) newErrors.note = "Max 500 chars";
+    const normalizedExpense = normalizeExpenseInput({
+      title,
+      amount: Number(amount),
+      category,
+      date,
+      note,
+    });
+    const newErrors = validateExpenseInput(normalizedExpense);
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
-    onSubmit({
-      title: trimmedTitle,
-      amount: amt,
-      category,
-      date,
-      note: note.trim() || undefined,
-    });
+    onSubmit(normalizedExpense);
 
     if (!initial) {
       setTitle("");
@@ -127,6 +121,7 @@ export function ExpenseForm({ initial, onSubmit, onCancel, submitLabel = "Save" 
             id="date"
             type="date"
             value={date}
+            max={todayISO()}
             onChange={(e) => setDate(e.target.value)}
           />
           {errors.date && <p className="text-sm text-destructive">{errors.date}</p>}
